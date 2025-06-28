@@ -2,50 +2,37 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"io/ioutil"
+	"os"
 
 	api "github.com/pedrobonifacio/pdfcpu-lite"
 )
 
 func main() {
-	fmt.Println("Testing WASM-compatible PDF functions...")
+	fmt.Println("Testing PDF optimization...")
 
-	// Test that font functions are properly disabled for WASM compatibility
-	err1 := api.InstallTrueTypeCollection("", "test.ttc")
-	err2 := api.InstallTrueTypeFont("", "test.ttf")
-	_, err3 := api.ReadFont("test")
-
-	// Verify these functions return WASM-compatible errors
-	if err1 != nil && strings.Contains(err1.Error(), "WASM mode") {
-		fmt.Println("✅ InstallTrueTypeCollection properly disabled for WASM")
-	} else {
-		fmt.Printf("❌ InstallTrueTypeCollection error: %v\n", err1)
+	if _, err := os.Stat("test.pdf"); err != nil {
+		fmt.Println("❌ test.pdf not found")
+		return
 	}
 
-	if err2 != nil && strings.Contains(err2.Error(), "WASM mode") {
-		fmt.Println("✅ InstallTrueTypeFont properly disabled for WASM")
-	} else {
-		fmt.Printf("❌ InstallTrueTypeFont error: %v\n", err2)
-	}
-
-	if err3 != nil && strings.Contains(err3.Error(), "WASM mode") {
-		fmt.Println("✅ ReadFont properly disabled for WASM")
-	} else {
-		fmt.Printf("❌ ReadFont error: %v\n", err3)
-	}
-
-	// Test that the core optimize function exists and is callable
-	// (even with empty input, it should return a proper error, not panic)
-	_, err := api.Optimize([]byte{}, nil)
+	inputPDF, err := ioutil.ReadFile("test.pdf")
 	if err != nil {
-		fmt.Printf("✅ Optimize function is available (returned expected error: %v)\n", err)
-	} else {
-		fmt.Println("❌ Optimize function should return error for empty input")
+		fmt.Printf("❌ Failed to read test.pdf: %v\n", err)
+		return
 	}
 
-	fmt.Println("\n🎯 Summary: WASM-compatible PDF library successfully configured!")
-	fmt.Println("- File operations removed from CoreWriteContext")
-	fmt.Println("- Font installation functions disabled for WASM")
-	fmt.Println("- Core PDF optimization remains functional")
-	fmt.Println("- All operations work in-memory using io.Writer interface")
+	optimizedPDF, err := api.Optimize(inputPDF, nil)
+	if err != nil {
+		fmt.Printf("❌ Optimization failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Original: %d bytes\n", len(inputPDF))
+	fmt.Printf("✅ Optimized: %d bytes\n", len(optimizedPDF))
+
+	if len(optimizedPDF) < len(inputPDF) {
+		reduction := float64(len(inputPDF)-len(optimizedPDF)) / float64(len(inputPDF)) * 100
+		fmt.Printf("✅ Reduced by %.1f%%\n", reduction)
+	}
 }

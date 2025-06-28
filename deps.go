@@ -1936,7 +1936,7 @@ func decodeUTF16String(b []byte) (string, error) {
 
 		val := (uint16(b[i]) << 8) + uint16(b[i+1])
 
-		if val <= 0xD7FF || val > 0xE000 {
+		if val <= 0xD7FF || val > 0xE000 && val <= 0xFFFF {
 			// Basic Multilingual Plane
 			u16 = append(u16, val)
 			i += 2
@@ -11528,13 +11528,13 @@ func parseArray(c ContextContext, line *string) (*Array, error) {
 		if len(l) == 0 {
 			return nil, errArrayNotTerminated
 		}
-
-		// position behind ']'
-		l = forwardParseBuf(l, 1)
-
-		*line = l
-
 	}
+
+	// position behind ']'
+	l = forwardParseBuf(l, 1)
+
+	*line = l
+
 	// if log.ParseEnabled() {
 	// 	log.Parse.Printf("ParseArray: returning array (len=%d): %v\n", len(a), a)
 	// }
